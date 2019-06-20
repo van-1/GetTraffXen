@@ -1,0 +1,426 @@
+#!/bin/sh
+
+A=0
+
+##### VARS ##### 
+
+
+
+##### FUNCs ##### 
+usage() { 
+	echo; 
+	echo "$0 vdsmaster_ip action [pool-list|param-name|param-name_addr|tmpl-list|vm-install|param-clear|set-cpu-num|set-ram-vol|set-hdd-size|disk-list|vif-list|vif-param-get-mac|vif-param-set-ipv4|vm-param-add-hostname|vm-param-add-resolvers|vm-param-add-ipv4_pri|vm-param-add-ipv4_netmask|vm-param-add-ipv4_gw|vm-param-add-ipv6_gw|vm-param-add-ipv4_sec|vm-param-add-ipv6_pri|set-boot-order|vm-start|vm-shutdown|vm-reboot|vif_0_rx|vif_0_tx|vm-param-get-dom-id|vm-param-add-startup_passwd|vm-param-add-winlic_key|vm-param-get|vdi-param-set-disk0|gat-all-params-vm-data|set-traf-control|console-list-vm|console-list-vm-location-minimal|power-state|resident-on|disable-ha|clear-def-tags|set-client-name|label-for-ks|clear-tags-vdi|set-client-name-vdi|label-vdi-for-ks|set-cores-per-socket|add-vds-backup|add-vdi-backup|remove-vds-backup|remove-vdi-backup|set-auto_poweron|remove-auto_poweron|set-start-delay|check-xe-tools|get-vds-tmpl|reset-xen-store|copy-vditmpl-to-vdivds|vm-restart-remotely|vm-start-remotely|vm-poweroff-remotel|vds-add-suspended-tag|vdi-add-suspended-tag|vds-remove-suspended-tag|vdi-remove-suspended-tag|vds-add-disabled-tag|vdi-add-disabled-tag|hosts-list|free-ram-on-host|default-SR|storage-physical-size|storage-physical-utilisation]"; 
+	echo 
+}
+
+##### MAIN ##### 
+
+if [[ $# -lt 2 ]]; then
+	usage;
+	exit 1;
+fi
+
+VDS_IP=$1
+A=$2
+
+if [ $A = "pool-list" ]; then 
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} "xe pool-list --minimal"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "param-name" ]; then 
+	UUID_SERVER=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} "xe pool-param-get uuid=$UUID_SERVER param-name=master"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "param-name_addr" ]; then 
+	UUID_CLUSTER=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh -o ControlMaster=auto -o ControlPath=/tmp/xencloud-ssh-%%h-%%p-%%r -o ControlPersist=360s  root@${VDS_IP} "xe host-param-get uuid=$UUID_CLUSTER param-name=address"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "tmpl-list" ]; then 
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe template-list params=uuid,name-label tags:contains="ks_tmpl_prod" tags:contains="latest""`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-install" ]; then 
+	VMNAME=$3
+	TEMPLATE=$4
+	SR_UUID="05fe50b2-77ab-e29f-66ed-d8807d71cdd1"
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} "xe vm-install new-name-label=$VMNAME template=$TEMPLATE sr-uuid=$SR_UUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "param-clear" ]; then 
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} "xe vm-param-clear uuid=$VMUUID param-name=tags"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "set-cpu-num" ]; then
+	VMUUID=$3
+	CPUNUM=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} "xe vm-param-set uuid=$VMUUID VCPUs-max=$CPUNUM && xe vm-param-set uuid=$VMUUID VCPUs-at-startup=$CPUNUM"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "set-ram-vol" ]; then
+	VMUUID=$3
+	RAMVOL=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID memory-static-max=$RAMVOL memory-dynamic-max=$RAMVOL memory-dynamic-min=$RAMVOL memory-static-min=$RAMVOL"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "set-hdd-size" ]; then
+	VDI_UUID=$3
+	HDDVOL=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} "xe vdi-resize uuid=$VDI_UUID disk-size=$HDDVOL"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "disk-list" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} "xe vm-disk-list vm=$VMUUID vdi-params=uuid vbd-params=false --minimal"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vif-list" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} "xe vif-list --minimal vm-uuid=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vif-param-get-mac" ]; then
+	VIFUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} "xe vif-param-get uuid=$VIFUUID param-name=MAC"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vif-param-set-ipv4" ]; then
+	VIFUUID=$3
+	IPSLIST=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vif-param-set uuid=$VIFUUID ipv4-allowed=$IPSLIST"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-add-hostname" ]; then
+	VMUUID=$3
+	HOSTNAME=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID xenstore-data:vm-data/hostname=$HOSTNAME"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-add-resolvers" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID xenstore-data:vm-data/resolvers='8.8.8.8 208.67.222.222 8.8.4.4 208.67.220.220'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-add-ipv4_pri" ]; then
+	VMUUID=$3
+	IPV4PRI=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID xenstore-data:vm-data/ipv4_pri="$IPV4PRI""`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-add-ipv4_netmask" ]; then
+	VMUUID=$3
+	IPV4NETMASK=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID xenstore-data:vm-data/ipv4_netmask=$IPV4NETMASK"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-add-ipv4_gw" ]; then
+	VMUUID=$3
+	IPV4GW=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID xenstore-data:vm-data/ipv4_gw=$IPV4GW"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-add-ipv6_gw" ]; then
+	VMUUID=$3
+	IPV6GW=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID xenstore-data:vm-data/ipv6_gw=$IPV6GW"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-add-ipv6_pri" ]; then
+	VMUUID=$3
+	IPV6PRI=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID xenstore-data:vm-data/ipv6_pri='$IPV6PRI'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-add-ipv4_sec" ]; then
+	VMUUID=$3
+	IPV4SECLIST=$4
+	IPV4SECNUM=$5
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID xenstore-data:vm-data/ipv4_sec$IPV4SECNUM='$IPV4SECLIST'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "set-boot-order" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID HVM-boot-params:order=ndc"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-start" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-start vm=$VMUUID force=true"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-shutdown" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-shutdown force=true vm=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-reboot" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-reboot vm=$VMUUID force=true"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vif_0_rx" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-data-source-query data-source=vif_0_rx vm=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vif_0_tx" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-data-source-query data-source=vif_0_tx vm=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-get-dom-id" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh -o ControlMaster=auto -o ControlPath=/tmp/xencloud-ssh-%%h-%%p-%%r -o ControlPersist=360s root@${VDS_IP} " xe vm-param-get param-name=dom-id uuid=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-add-startup_passwd" ]; then
+	VMUUID=$3
+	PASSWD=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID xenstore-data:vm-data/startup_passwd=$PASSWD"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-add-winlic_key" ]; then
+	VMUUID=$3
+	WINLIC_KEY=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID xenstore-data:vm-data/winlic_key=$WINLIC_KEY"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-param-get" ]; then
+	VMUUID=$3
+	PARAMETER=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-get uuid=$VMUUID param-name=xenstore-data param-key=vm-data/$PARAMETER"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vdi-param-set-disk0" ]; then
+	VDI_UUID=$3
+	VMNAME=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-param-set uuid=$VDI_UUID name-label=${VMNAME}_disk0"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "gat-all-params-vm-data" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-get uuid=$VMUUID param-name=xenstore-data"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "set-traf-control" ]; then
+	VIFUUID=$3
+	CONTROL=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vif-param-set uuid=$VIFUUID locking-mode=$CONTROL"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "console-list-vm" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe console-list vm-uuid=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "console-list-vm-location" ]; then
+	VMNAME=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe console-list vm-name-label=${VMNAME} params=location"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "console-list-vm-location-minimal" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe console-list params=location --minimal vm-uuid=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "power-state" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-get param-name=power-state uuid=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "resident-on" ]; then	
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh -o ControlMaster=auto -o ControlPath=/tmp/xencloud-ssh-%%h-%%p-%%r -o ControlPersist=360s root@${VDS_IP} " xe vm-param-get param-name=resident-on uuid=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "disable-ha" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-clear param-name="ha-restart-priority" uuid=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "enable-ha" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set ha-restart-priority="best-effort" uuid=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "clear-def-tags" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-clear uuid=$VMUUID param-name=tags"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "set-client-name" ]; then
+	VMUUID=$3
+	CLIENTNAME=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-add uuid=$VMUUID param-name=tags param-key="client=${CLIENTNAME}""`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "label-for-ks" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID name-description='Installed via cp.king-servers.com'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "clear-tags-vdi" ]; then
+	VDI_UUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-param-clear uuid=$VDI_UUID param-name=tags"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "set-client-name-vdi" ]; then
+	VDI_UUID=$3
+	CLIENTNAME=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-param-add uuid=$VDI_UUID param-name=tags param-key="client=${CLIENTNAME}""`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "label-vdi-for-ks" ]; then
+	VDI_UUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-param-set uuid=$VDI_UUID name-description='Installed via cp.king-servers.com'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "set-cores-per-socket" ]; then
+	VMUUID=$3
+	CORESNUM=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID platform:cores-per-socket=${CORESNUM}"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "add-vds-backup" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-add uuid=$VMUUID param-name=tags param-key='client_snapshot_2dw'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "add-vdi-backup" ]; then
+	VDI_UUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-param-add uuid=$VDI_UUID param-name=tags param-key='client_snapshot_2dw'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "remove-vds-backup" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-remove uuid=$VMUUID param-name=tags param-key='client_snapshot_2dw'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "remove-vdi-backup" ]; then
+	VDI_UUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-param-remove uuid=$VDI_UUID param-name=tags param-key='client_snapshot_2dw'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "set-auto_poweron" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID other-config:auto_poweron=true"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "remove-auto_poweron" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-remove uuid=$VMUUID param-name=other-config param-key='auto_poweron'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "set-start-delay" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-set uuid=$VMUUID start-delay='10' order='1'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-restart-remotely" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " /opt/KS/xs_vds_pwr_mgmt.sh reboot $VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-start-remotely" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " /opt/KS/xs_vds_pwr_mgmt.sh start $VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vm-poweroff-remotely" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " /opt/KS/xs_vds_pwr_mgmt.sh stop $VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vds-add-suspended-tag" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-add uuid=$VMUUID param-name=tags param-key='SUSPENDED'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vdi-add-suspended-tag" ]; then
+	VDI_UUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-param-add uuid=$VDI_UUID param-name=tags param-key='SUSPENDED'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vds-remove-suspended-tag" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-remove uuid=$VMUUID param-name=tags param-key='SUSPENDED'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vdi-remove-suspended-tag" ]; then
+	VDI_UUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-param-remove uuid=$VDI_UUID param-name=tags param-key='SUSPENDED'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vds-add-disabled-tag" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-add uuid=$VMUUID param-name=tags param-key='DISABLED'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vdi-add-disabled-tag" ]; then
+	VDI_UUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-param-add uuid=$VDI_UUID param-name=tags param-key='DISABLED'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vds-remove-disabled-tag" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-remove uuid=$VMUUID param-name=tags param-key='DISABLED'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "vdi-remove-disabled-tag" ]; then
+	VDI_UUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-param-remove uuid=$VDI_UUID param-name=tags param-key='DISABLED'"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "hosts-list" ]; then
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe host-list --minimal"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "free-ram-on-host" ]; then
+	HOST_UUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe host-param-get uuid=$HOST_UUID param-name=memory-free"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "default-SR" ]; then
+	POOLUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe pool-param-get uuid=$POOLUUID param-name=default-SR"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "storage-physical-size" ]; then
+	SR_UUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe sr-param-get uuid=$SR_UUID param-name=physical-size"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "storage-physical-utilisation" ]; then
+	SR_UUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe sr-param-get uuid=$SR_UUID param-name=physical-utilisation"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "check-xe-tools" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-get param-name="os-version" param-key="name" uuid=$VMUUID"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "get-vds-tmpl" ]; then
+	VDI_NAME=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-list name-label=${VDI_NAME} tags:contains='ks_tmpl_prod' tags:contains='latest' --minimal"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "reset-xen-store" ]; then
+	VMUUID=$3
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vm-param-clear uuid=$VMUUID param-name=xenstore-data"`
+	echo "${ANSWER}"
+	exit;
+elif [ $A = "copy-vditmpl-to-vdivds" ]; then
+	TMPL_VDI_UUID=$3
+	VDI_UUID=$4
+	ANSWER=`. /root/.ssh/.agent_info && ssh root@${VDS_IP} " xe vdi-copy uuid=$TMPL_VDI_UUID into-vdi-uuid=$VDI_UUID"`
+	echo "${ANSWER}"
+	exit;
+else
+	echo;
+	echo "Please set ACTION !"; 
+	usage;
+	exit;
+fi
