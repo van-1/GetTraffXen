@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 
-use lib "/home/sites/preproduction.cp.king-servers.com/include/";
 use MAIN;
 use HTMLSUBS;
 use Parallel::ForkManager;
