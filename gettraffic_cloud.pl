@@ -153,14 +153,7 @@ sub get_traff_snmp {
 	#проверяем, больше, или меньше текущее значение, чем предыдущее, на случай, что счётчики сбрасывались, между измерениями
 	my $delta_traff_in = 0;
 	my $delta_traff_out = 0;
-	if ( ($traff_in - $traff_in_absolute > ($my_unix_time - $unix_time) * 125000000 * 4 or $traff_out - $traff_out_absolute > ($my_unix_time - $unix_time) * 125000000 * 4) && ($traff_in_absolute !=0 and $traff_out_absolute !=0 ) ) {
-		#print "$server_id, $mon, $mday, $my_unix_time\n" if $debug;
-		#print "\t$traff_in >= $traff_in_absolute, $traff_out >= $traff_out_absolute\n";
-		#$traff_in = $traff_in_absolute;
-		#$traff_out = $traff_out_absolute;
-		return;
-	}
-		
+			
  	if($traff_in >= $traff_in_absolute){ $delta_traff_in = $traff_in - $traff_in_absolute; }
 	if($traff_out >= $traff_out_absolute){ $delta_traff_out = $traff_out - $traff_out_absolute; }
 
