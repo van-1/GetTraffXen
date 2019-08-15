@@ -3,8 +3,7 @@
 use strict;
 use warnings;
 
-use MAIN;
-use HTMLSUBS;
+
 use Parallel::ForkManager;
 
 use Net::SNMP;
